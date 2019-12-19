@@ -72,6 +72,17 @@ dt <- no_pub_long_gobdep[gob_dep_long][pub_long_gobdep][
         ][  partido == "Nacionalista", color := "skyblue"
             ][, neto := sum(noPublicos, na.rm = TRUE) + sum(publicos, na.rm = TRUE), by = .(inciso, ano)
               ]
+# Cuando se grafica quedaba una linea boyando. Es porque una fecha es 1999/11/30
+dt$f_ini %>% table()
+dt[f_ini == "1999-11-30", f_ini := as.Date("1999-12-31")]
+# En base a comentario Guille Lezama modificar fechas al 10/07
+rep_date <- function(data, var){
+    data[, (gsub(get(var), pattern = "-12-", replacement = "-7-") %>% 
+             gsub(get(var), pattern = "-31", replacement = "-10") %>% as.Date())]
+}
+dt[, `:=`(f_ini = rep_date(dt, "f_ini"),
+          f_fin = rep_date(dt, "f_fin"))]
+saveRDS(dt, file = here::here("Datos", "Finales", "GobDepartameltal.rds"))
 
 # Función para graficar
 func_plot <- function(data, x = "x",y = "y", title, scala = "free", color = "color") {
@@ -87,21 +98,21 @@ func_plot <- function(data, x = "x",y = "y", title, scala = "free", color = "col
         facet_wrap(~inciso, scales = scala) + 
         geom_rect(data = data , aes(xmin = f_ini, ymin = -Inf, 
                                     xmax = f_fin, ymax = Inf), fill = fill, alpha = 0.5) +
-        geom_vline(xintercept = as.Date(paste(seq(1995,2015,5),"12","31",sep="-")),
+        geom_vline(xintercept = as.Date(paste(seq(1995,2015,5),"07","10",sep="-")),
                    colour = "brown", size = .1, linetype = 3) +
         theme(axis.text.x = element_text(angle=45, hjust=1, size = 6),
               plot.caption = element_text(color = "black", face = "italic", size = 8),
               panel.spacing =  unit(0, "lines"),
-              aspect.ratio = 1) +
+              aspect.ratio = 1
+              ) +
         scale_y_continuous(name = paste("Cantidad funcionarios", title, sep = " ")) +
         scale_x_date(name = "Fecha", date_labels = "%Y", position = "bottom", 
                      limits = as.Date(c("1995-12-31","2018-12-31")), 
                      breaks = seq.Date(from = as.Date("1995-12-31"), 
                                        to = as.Date("2018-12-31"), by = "5 year"))
 }
-
-func_plot(dt, x = "f_ini", y = "neto", title = "publicos y no públicos")
+func_plot(dt, x = "f_ini", y = "neto", title = "publicos y no públicos", scala = "free")
 func_plot(dt, x = "f_ini", y = "noPublicos", title = "no públicos")
 func_plot(dt, x = "f_ini", y = "publicos", title = "públicos")
 
-ggsave(here::here("output", "funcTotalIntendenciaFree.png"))
+# ggsave(here::here("output", "funcTotalIntendenciaFree.png"))
